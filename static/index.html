@@ -7,114 +7,258 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Live Translator</title>
     <link rel="manifest" href="/static/manifest.json">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f',
+                        },
+                        surface: {
+                            900: '#0f0d0a',
+                            800: '#1a1410',
+                            700: '#262018',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'gradient': 'gradient 20s ease infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'wave': 'wave 1s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite',
+                        'fade-in': 'fadeIn 0.6s ease-out forwards',
+                        'slide-up': 'slideUp 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        },
+                        wave: {
+                            '0%, 100%': { transform: 'scaleY(0.5)' },
+                            '50%': { transform: 'scaleY(1)' },
+                        },
+                        glow: {
+                            '0%, 100%': { boxShadow: '0 0 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2)' },
+                            '50%': { boxShadow: '0 0 30px rgba(245, 158, 11, 0.6), 0 0 60px rgba(245, 158, 11, 0.3)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #1a1a2e;
-            color: #fff;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+        /* Gradient mesh background */
+        .gradient-mesh {
+            background:
+                radial-gradient(at 20% 30%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),
+                radial-gradient(at 80% 20%, rgba(194, 65, 12, 0.12) 0%, transparent 50%),
+                radial-gradient(at 40% 80%, rgba(180, 83, 9, 0.1) 0%, transparent 50%),
+                radial-gradient(at 90% 70%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+                linear-gradient(180deg, #0f0d0a 0%, #1a1410 100%);
+            background-size: 200% 200%;
+            animation: gradient 20s ease infinite;
         }
-        h1 { font-size: 1.5rem; margin-bottom: 20px; }
-        .direction {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+
+        /* Sound wave bars */
+        .wave-bar {
+            animation: wave 1s ease-in-out infinite;
         }
-        .direction button {
-            padding: 12px 24px;
-            border: 2px solid #4a4a6a;
-            background: transparent;
-            color: #fff;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
+        .wave-bar:nth-child(1) { animation-delay: 0s; }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.15s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.25s; }
+        .wave-bar:nth-child(6) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(7) { animation-delay: 0.05s; }
+
+        /* Staggered fade-in */
+        .stagger-1 { animation-delay: 0.1s; }
+        .stagger-2 { animation-delay: 0.2s; }
+        .stagger-3 { animation-delay: 0.3s; }
+        .stagger-4 { animation-delay: 0.4s; }
+        .stagger-5 { animation-delay: 0.5s; }
+
+        /* Glass effect */
+        .glass {
+            background: rgba(26, 20, 16, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(245, 158, 11, 0.1);
         }
-        .direction button.active {
-            background: #4a4a6a;
-            border-color: #6a6a8a;
+
+        /* Active mic button glow */
+        .mic-active {
+            animation: glow 2s ease-in-out infinite;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
-        #mic-btn {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: none;
-            background: #e94560;
-            color: #fff;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        #mic-btn:disabled { background: #4a4a6a; }
-        #mic-btn.active {
-            background: #16c79a;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        #status {
-            margin-top: 20px;
-            color: #888;
-            font-size: 0.9rem;
-        }
-        .devices {
-            margin-top: 30px;
-            width: 100%;
-            max-width: 350px;
-        }
-        .device-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 0.8rem;
-            color: #888;
-        }
-        .device-row label {
-            width: 50px;
-            flex-shrink: 0;
-        }
-        .device-row select {
-            flex: 1;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #4a4a6a;
-            background: #2a2a4e;
-            color: #fff;
-            font-size: 0.8rem;
-        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(245, 158, 11, 0.3); border-radius: 3px; }
     </style>
 </head>
-<body>
-    <h1>🎙️ Live Translator</h1>
+<body class="gradient-mesh min-h-screen font-sans text-amber-100 overflow-x-hidden">
 
-    <div class="direction">
-        <button id="btn-ru-en" class="active">RU → EN</button>
-        <button id="btn-en-ru">EN → RU</button>
-    </div>
+    <main class="min-h-screen flex flex-col items-center justify-center px-6 py-12">
 
-    <button id="mic-btn" disabled>Loading...</button>
-    <div id="status">Initializing...</div>
+        <!-- Header -->
+        <header class="opacity-0 animate-slide-up stagger-1 text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-amber-50 mb-2">
+                Live Translator
+            </h1>
+            <p class="text-amber-200/60 text-sm font-medium tracking-wide">
+                Real-time voice translation
+            </p>
+        </header>
 
-    <div class="devices">
-        <div class="device-row">
-            <label>🎤 Mic</label>
-            <select id="mic-select"><option>Loading...</option></select>
+        <!-- Direction Toggle -->
+        <div class="opacity-0 animate-slide-up stagger-2 mb-10">
+            <div class="glass rounded-full p-1.5 flex gap-1">
+                <button
+                    id="btn-ru-en"
+                    class="direction-btn active px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300"
+                >
+                    RU → EN
+                </button>
+                <button
+                    id="btn-en-ru"
+                    class="direction-btn px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300"
+                >
+                    EN → RU
+                </button>
+            </div>
         </div>
-        <div class="device-row">
-            <label>🔊 Out</label>
-            <select id="speaker-select"><option>Loading...</option></select>
+
+        <!-- Sound Wave Visualizer -->
+        <div id="sound-wave" class="opacity-0 animate-fade-in stagger-3 flex items-center justify-center gap-1 h-16 mb-6">
+            <div class="wave-bar w-1 h-8 bg-amber-500/30 rounded-full origin-center"></div>
+            <div class="wave-bar w-1 h-12 bg-amber-500/40 rounded-full origin-center"></div>
+            <div class="wave-bar w-1 h-10 bg-amber-500/50 rounded-full origin-center"></div>
+            <div class="wave-bar w-1 h-14 bg-amber-500/60 rounded-full origin-center"></div>
+            <div class="wave-bar w-1 h-10 bg-amber-500/50 rounded-full origin-center"></div>
+            <div class="wave-bar w-1 h-12 bg-amber-500/40 rounded-full origin-center"></div>
+            <div class="wave-bar w-1 h-8 bg-amber-500/30 rounded-full origin-center"></div>
         </div>
-        <div class="hint" id="ios-hint" style="display:none; margin-top:15px; text-align:center; font-size:0.75rem; color:#666;">
-            iOS: Use Control Center → AirPlay to select AirPods
+
+        <!-- Mic Button -->
+        <div class="opacity-0 animate-slide-up stagger-3 relative mb-8">
+            <button
+                id="mic-btn"
+                disabled
+                class="relative w-32 h-32 md:w-36 md:h-36 rounded-full
+                       bg-gradient-to-br from-amber-500 to-amber-600
+                       text-surface-900 font-bold text-lg
+                       shadow-lg shadow-amber-500/20
+                       transition-all duration-300 ease-out
+                       hover:scale-105 hover:shadow-xl hover:shadow-amber-500/30
+                       active:scale-95
+                       disabled:from-surface-700 disabled:to-surface-800
+                       disabled:text-amber-200/40 disabled:shadow-none
+                       disabled:cursor-not-allowed"
+            >
+                <span class="relative z-10">Loading...</span>
+            </button>
+
+            <!-- Pulse rings (visible when active) -->
+            <div id="pulse-rings" class="absolute inset-0 pointer-events-none hidden">
+                <div class="absolute inset-0 rounded-full border-2 border-amber-500/40 animate-ping"></div>
+                <div class="absolute inset-2 rounded-full border border-amber-500/20 animate-pulse-slow"></div>
+            </div>
         </div>
-    </div>
+
+        <!-- Status -->
+        <p id="status" class="opacity-0 animate-fade-in stagger-4 text-amber-200/50 text-sm font-medium mb-8">
+            Initializing...
+        </p>
+
+        <!-- Metrics Panel -->
+        <div id="metrics" class="opacity-0 animate-slide-up stagger-4 glass rounded-2xl px-6 py-4 hidden">
+            <div class="flex items-center gap-6 font-mono text-sm">
+                <div class="flex flex-col items-center">
+                    <span class="text-amber-200/40 text-xs uppercase tracking-wider mb-1">First Audio</span>
+                    <span id="stt-time" class="text-amber-400 font-medium">--</span>
+                </div>
+                <div class="w-px h-8 bg-amber-500/20"></div>
+                <div class="flex flex-col items-center">
+                    <span class="text-amber-200/40 text-xs uppercase tracking-wider mb-1">LLM</span>
+                    <span id="llm-time" class="text-amber-400 font-medium">--</span>
+                </div>
+                <div class="w-px h-8 bg-amber-500/20"></div>
+                <div class="flex flex-col items-center">
+                    <span class="text-amber-200/40 text-xs uppercase tracking-wider mb-1">TTS</span>
+                    <span id="tts-time" class="text-amber-400 font-medium">--</span>
+                </div>
+                <div class="w-px h-8 bg-amber-500/20"></div>
+                <div class="flex flex-col items-center">
+                    <span class="text-amber-200/40 text-xs uppercase tracking-wider mb-1">Total</span>
+                    <span id="total-time" class="text-amber-500 font-semibold">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Selectors -->
+        <div class="opacity-0 animate-slide-up stagger-5 w-full max-w-sm mt-10 space-y-3">
+            <div class="flex items-center gap-4">
+                <span class="text-2xl w-8 text-center">🎤</span>
+                <select
+                    id="mic-select"
+                    class="flex-1 px-4 py-3 rounded-xl glass text-amber-100 text-sm
+                           border-none outline-none focus:ring-2 focus:ring-amber-500/30
+                           cursor-pointer transition-all"
+                >
+                    <option>Loading...</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-2xl w-8 text-center">🔊</span>
+                <select
+                    id="speaker-select"
+                    class="flex-1 px-4 py-3 rounded-xl glass text-amber-100 text-sm
+                           border-none outline-none focus:ring-2 focus:ring-amber-500/30
+                           cursor-pointer transition-all"
+                >
+                    <option>Loading...</option>
+                </select>
+            </div>
+
+            <p id="ios-hint" class="hidden text-center text-xs text-amber-200/30 pt-4">
+                iOS: Use Control Center → AirPlay to select AirPods
+            </p>
+        </div>
+
+    </main>
 
     <script type="module">
         import { Room, RoomEvent, Track } from 'https://cdn.jsdelivr.net/npm/livekit-client@2/+esm';
@@ -125,15 +269,38 @@
         const btnEnRu = document.getElementById('btn-en-ru');
         const micSelect = document.getElementById('mic-select');
         const speakerSelect = document.getElementById('speaker-select');
+        const metricsDiv = document.getElementById('metrics');
+        const sttTime = document.getElementById('stt-time');
+        const llmTime = document.getElementById('llm-time');
+        const ttsTime = document.getElementById('tts-time');
+        const totalTime = document.getElementById('total-time');
+        const soundWave = document.getElementById('sound-wave');
+        const pulseRings = document.getElementById('pulse-rings');
 
         let room = null;
         let direction = 'ru-en';
         let isConnected = false;
 
+        // Direction button styles
+        function updateDirectionButtons() {
+            const activeClasses = 'bg-gradient-to-r from-amber-500 to-amber-600 text-surface-900 shadow-lg shadow-amber-500/20';
+            const inactiveClasses = 'text-amber-200/60 hover:text-amber-100 hover:bg-amber-500/10';
+
+            if (direction === 'ru-en') {
+                btnRuEn.className = `direction-btn px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeClasses}`;
+                btnEnRu.className = `direction-btn px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${inactiveClasses}`;
+            } else {
+                btnEnRu.className = `direction-btn px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeClasses}`;
+                btnRuEn.className = `direction-btn px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${inactiveClasses}`;
+            }
+        }
+
+        // Initialize direction buttons
+        updateDirectionButtons();
+
         // Load devices
         async function loadDevices() {
             try {
-                // Request permission first
                 await navigator.mediaDevices.getUserMedia({ audio: true });
                 const devices = await navigator.mediaDevices.enumerateDevices();
 
@@ -159,20 +326,38 @@
         // Direction buttons
         btnRuEn.onclick = () => {
             direction = 'ru-en';
-            btnRuEn.classList.add('active');
-            btnEnRu.classList.remove('active');
+            updateDirectionButtons();
             if (isConnected) reconnect();
         };
         btnEnRu.onclick = () => {
             direction = 'en-ru';
-            btnEnRu.classList.add('active');
-            btnRuEn.classList.remove('active');
+            updateDirectionButtons();
             if (isConnected) reconnect();
         };
 
         async function getToken() {
             const res = await fetch(`/api/token?direction=${direction}`);
             return res.json();
+        }
+
+        function setActiveState(active) {
+            if (active) {
+                micBtn.classList.add('mic-active');
+                micBtn.classList.remove('from-amber-500', 'to-amber-600');
+                soundWave.classList.remove('opacity-30');
+                soundWave.querySelectorAll('.wave-bar').forEach(bar => {
+                    bar.style.animationPlayState = 'running';
+                });
+                pulseRings.classList.remove('hidden');
+            } else {
+                micBtn.classList.remove('mic-active');
+                micBtn.classList.add('from-amber-500', 'to-amber-600');
+                soundWave.classList.add('opacity-30');
+                soundWave.querySelectorAll('.wave-bar').forEach(bar => {
+                    bar.style.animationPlayState = 'paused';
+                });
+                pulseRings.classList.add('hidden');
+            }
         }
 
         async function connect() {
@@ -193,7 +378,6 @@
             room.on(RoomEvent.TrackSubscribed, (track) => {
                 if (track.kind === Track.Kind.Audio) {
                     const el = track.attach();
-                    // Set output device if supported
                     if (el.setSinkId && speakerSelect.value) {
                         el.setSinkId(speakerSelect.value).catch(console.error);
                     }
@@ -203,16 +387,32 @@
 
             room.on(RoomEvent.Disconnected, () => {
                 isConnected = false;
-                micBtn.classList.remove('active');
+                setActiveState(false);
                 micBtn.textContent = 'Start';
                 status.textContent = 'Disconnected';
+                metricsDiv.classList.add('hidden');
+            });
+
+            room.on(RoomEvent.DataReceived, (payload) => {
+                try {
+                    const data = JSON.parse(new TextDecoder().decode(payload));
+                    if (data.type === 'metrics') {
+                        sttTime.textContent = `${data.stt_ms}ms`;
+                        llmTime.textContent = `${data.llm_ms || 0}ms`;
+                        ttsTime.textContent = `${data.tts_ms}ms`;
+                        totalTime.textContent = `${data.total_ms}ms`;
+                        metricsDiv.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.error('Failed to parse metrics:', e);
+                }
             });
 
             await room.connect(url, token);
             await room.localParticipant.setMicrophoneEnabled(true);
 
             isConnected = true;
-            micBtn.classList.add('active');
+            setActiveState(true);
             micBtn.textContent = 'Stop';
             status.textContent = 'Listening...';
         }
@@ -223,7 +423,7 @@
                 room = null;
             }
             isConnected = false;
-            micBtn.classList.remove('active');
+            setActiveState(false);
             micBtn.textContent = 'Start';
             status.textContent = 'Ready';
         }
@@ -233,7 +433,6 @@
             await connect();
         }
 
-        // Switch devices on the fly
         micSelect.onchange = async () => {
             if (room && isConnected) {
                 await room.switchActiveDevice('audioinput', micSelect.value);
@@ -245,7 +444,6 @@
             }
         };
 
-        // Main button
         micBtn.onclick = async () => {
             micBtn.disabled = true;
             try {
@@ -271,10 +469,15 @@
             micBtn.textContent = 'Start';
             status.textContent = 'Ready';
 
-            // Show iOS hint
+            // Pause wave animation initially
+            soundWave.classList.add('opacity-30');
+            soundWave.querySelectorAll('.wave-bar').forEach(bar => {
+                bar.style.animationPlayState = 'paused';
+            });
+
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
             if (isIOS) {
-                document.getElementById('ios-hint').style.display = 'block';
+                document.getElementById('ios-hint').classList.remove('hidden');
             }
         }
     </script>
