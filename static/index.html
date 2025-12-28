@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Live Translator</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 20px; }
+        .direction {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .direction button {
+            padding: 12px 24px;
+            border: 2px solid #4a4a6a;
+            background: transparent;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .direction button.active {
+            background: #4a4a6a;
+            border-color: #6a6a8a;
+        }
+        #mic-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: #e94560;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #mic-btn:disabled { background: #4a4a6a; }
+        #mic-btn.active {
+            background: #16c79a;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        #status {
+            margin-top: 20px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .devices {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 350px;
+        }
+        .device-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .device-row label {
+            width: 50px;
+            flex-shrink: 0;
+        }
+        .device-row select {
+            flex: 1;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #4a4a6a;
+            background: #2a2a4e;
+            color: #fff;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎙️ Live Translator</h1>
+
+    <div class="direction">
+        <button id="btn-ru-en" class="active">RU → EN</button>
+        <button id="btn-en-ru">EN → RU</button>
+    </div>
+
+    <button id="mic-btn" disabled>Loading...</button>
+    <div id="status">Initializing...</div>
+
+    <div class="devices">
+        <div class="device-row">
+            <label>🎤 Mic</label>
+            <select id="mic-select"><option>Loading...</option></select>
+        </div>
+        <div class="device-row">
+            <label>🔊 Out</label>
+            <select id="speaker-select"><option>Loading...</option></select>
+        </div>
+        <div class="hint" id="ios-hint" style="display:none; margin-top:15px; text-align:center; font-size:0.75rem; color:#666;">
+            iOS: Use Control Center → AirPlay to select AirPods
+        </div>
+    </div>
+
+    <script type="module">
+        import { Room, RoomEvent, Track } from 'https://cdn.jsdelivr.net/npm/livekit-client@2/+esm';
+
+        const micBtn = document.getElementById('mic-btn');
+        const status = document.getElementById('status');
+        const btnRuEn = document.getElementById('btn-ru-en');
+        const btnEnRu = document.getElementById('btn-en-ru');
+        const micSelect = document.getElementById('mic-select');
+        const speakerSelect = document.getElementById('speaker-select');
+
+        let room = null;
+        let direction = 'ru-en';
+        let isConnected = false;
+
+        // Load devices
+        async function loadDevices() {
+            try {
+                // Request permission first
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+
+                const mics = devices.filter(d => d.kind === 'audioinput');
+                const speakers = devices.filter(d => d.kind === 'audiooutput');
+
+                micSelect.innerHTML = mics.map((d, i) =>
+                    `<option value="${d.deviceId}">${d.label || 'Mic ' + (i+1)}</option>`
+                ).join('');
+
+                speakerSelect.innerHTML = speakers.map((d, i) =>
+                    `<option value="${d.deviceId}">${d.label || 'Speaker ' + (i+1)}</option>`
+                ).join('');
+
+                if (speakers.length === 0) {
+                    speakerSelect.innerHTML = '<option>Default</option>';
+                }
+            } catch (e) {
+                console.error('Device enumeration failed:', e);
+            }
+        }
+
+        // Direction buttons
+        btnRuEn.onclick = () => {
+            direction = 'ru-en';
+            btnRuEn.classList.add('active');
+            btnEnRu.classList.remove('active');
+            if (isConnected) reconnect();
+        };
+        btnEnRu.onclick = () => {
+            direction = 'en-ru';
+            btnEnRu.classList.add('active');
+            btnRuEn.classList.remove('active');
+            if (isConnected) reconnect();
+        };
+
+        async function getToken() {
+            const res = await fetch(`/api/token?direction=${direction}`);
+            return res.json();
+        }
+
+        async function connect() {
+            status.textContent = 'Connecting...';
+            const { token, url } = await getToken();
+
+            room = new Room({
+                adaptiveStream: true,
+                dynacast: true,
+                audioCaptureDefaults: {
+                    deviceId: micSelect.value || undefined,
+                },
+                audioOutput: {
+                    deviceId: speakerSelect.value || undefined,
+                },
+            });
+
+            room.on(RoomEvent.TrackSubscribed, (track) => {
+                if (track.kind === Track.Kind.Audio) {
+                    const el = track.attach();
+                    // Set output device if supported
+                    if (el.setSinkId && speakerSelect.value) {
+                        el.setSinkId(speakerSelect.value).catch(console.error);
+                    }
+                    document.body.appendChild(el);
+                }
+            });
+
+            room.on(RoomEvent.Disconnected, () => {
+                isConnected = false;
+                micBtn.classList.remove('active');
+                micBtn.textContent = 'Start';
+                status.textContent = 'Disconnected';
+            });
+
+            await room.connect(url, token);
+            await room.localParticipant.setMicrophoneEnabled(true);
+
+            isConnected = true;
+            micBtn.classList.add('active');
+            micBtn.textContent = 'Stop';
+            status.textContent = 'Listening...';
+        }
+
+        async function disconnect() {
+            if (room) {
+                await room.disconnect();
+                room = null;
+            }
+            isConnected = false;
+            micBtn.classList.remove('active');
+            micBtn.textContent = 'Start';
+            status.textContent = 'Ready';
+        }
+
+        async function reconnect() {
+            await disconnect();
+            await connect();
+        }
+
+        // Switch devices on the fly
+        micSelect.onchange = async () => {
+            if (room && isConnected) {
+                await room.switchActiveDevice('audioinput', micSelect.value);
+            }
+        };
+        speakerSelect.onchange = async () => {
+            if (room && isConnected) {
+                await room.switchActiveDevice('audiooutput', speakerSelect.value);
+            }
+        };
+
+        // Main button
+        micBtn.onclick = async () => {
+            micBtn.disabled = true;
+            try {
+                if (isConnected) {
+                    await disconnect();
+                } else {
+                    await connect();
+                }
+            } catch (e) {
+                status.textContent = 'Error: ' + e.message;
+                console.error(e);
+            }
+            micBtn.disabled = false;
+        };
+
+        // Init
+        if (!navigator.mediaDevices) {
+            status.textContent = 'Error: HTTPS required';
+            micBtn.textContent = 'No mic';
+        } else {
+            loadDevices();
+            micBtn.disabled = false;
+            micBtn.textContent = 'Start';
+            status.textContent = 'Ready';
+
+            // Show iOS hint
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            if (isIOS) {
+                document.getElementById('ios-hint').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
