@@ -25,16 +25,6 @@ LANG_CONFIG = {
     "en-ru": {"source": "en", "target": "ru"},
 }
 
-# Technical terms that should be preserved or translated correctly
-CUSTOM_VOCABULARY = [
-    "LiveKit",
-    "WebRTC",
-    "API",
-    "SDK",
-    "Python",
-    "JavaScript",
-]
-
 
 class TranslatorAgent(Agent):
     def __init__(self) -> None:
@@ -51,13 +41,6 @@ def create_session(direction: str) -> AgentSession:
         interim_results=True,
         translation_enabled=True,
         translation_target_languages=[target],
-        # Quality improvements
-        pre_processing_audio_enhancer=True,
-        custom_vocabulary=CUSTOM_VOCABULARY,
-        translation_context_adaptation=True,
-        # Speed improvements
-        endpointing=0.05,
-        maximum_duration_without_endpointing=3,
     )
 
     tts = cartesia.TTS(
